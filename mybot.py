@@ -1,3 +1,4 @@
+import os
 import discord
 from discord.ext import commands
 import asyncio
@@ -20,8 +21,7 @@ def keep_alive():
 
 TARGET_CHANNELS = ["おひるね", "睡眠厨","保健室"]
 CUT_OFF_SECONDS = 2 * 60 * 60 
-TOKEN = 'MTQ1OTEyNjI2NTUzMjM4NzM1OA.GQKcXk.YBB6oDkMLJdrRplR2Rne2NTBGJdvt19kNdEz-I'
-
+TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
@@ -43,4 +43,4 @@ async def on_voice_state_update(member, before, after):
 
 # Webサーバーを起動してからBotを動かす
 keep_alive()
-bot.run('MTQ1OTEyNjI2NTUzMjM4NzM1OA.GQKcXk.YBB6oDkMLJdrRplR2Rne2NTBGJdvt19kNdEz-I')
+bot.run(os.getenv('DISCORD_TOKEN'))
