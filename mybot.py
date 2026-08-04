@@ -57,14 +57,13 @@ def get_guild_config(guild_id):
         save_config(config)
     return config[str_guild_id]
 
-# Discord Botの初期化
+# Discord Botの初期化（デフォルトの!helpを無効化）
 intents = discord.Intents.default()
 intents.voice_states = True
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 # ユーザーのVC入室時間を管理する辞書
-# 構造: { (guild_id, user_id): datetime }
 join_times = {}
 
 @bot.event
@@ -98,7 +97,6 @@ async def check_vc_timeout():
         await asyncio.sleep(10)
         now = datetime.now(timezone.utc)
 
-        # 記録されている全ユーザーをチェック
         for (guild_id, user_id), join_time in list(join_times.items()):
             guild = bot.get_guild(guild_id)
             if not guild:
@@ -110,12 +108,10 @@ async def check_vc_timeout():
 
             member = guild.get_member(user_id)
             
-            # メンバーがVCにいない、または対象チャンネル以外にいる場合はリセット
             if not member or not member.voice or not member.voice.channel or member.voice.channel.name not in target_channels:
                 join_times.pop((guild_id, user_id), None)
                 continue
 
-            # 経過時間を計算
             elapsed_minutes = (now - join_time).total_seconds() / 60
             if elapsed_minutes >= cut_off_minutes:
                 try:
@@ -127,6 +123,43 @@ async def check_vc_timeout():
                 join_times.pop((guild_id, user_id), None)
 
 # --- コマンド処理 ---
+
+# ヘルプコマンド（!sleepy）- 画像風のEmbed表示
+@bot.command(name="sleepy")
+async def sleepy_help(ctx):
+    # 画像に合わせた紫色のEmbedを作成
+    embed = discord.Embed(
+        title="🛌 寝落ち防止Bot コマンドヘルプ",
+        description="指定されたボイスチャンネルで一定時間が経過すると、自動的にVCから切断します。\n設定はサーバーごとに独立して保存されます。",
+        color=0x9b59b6 # 画像に近い紫色
+    )
+    
+    # 各コマンドをフィールドとして追加（inline=Falseで縦並びに）
+    embed.add_field(
+        name="`!status` (または `!config`)",
+        value="現在の自動切断時間と対象チャンネルの一覧を表示します。（誰でも使用可能）",
+        inline=False
+    )
+    embed.add_field(
+        name="`!set_time <分数>`",
+        value="自動切断までの時間を「分」単位で設定します。\n*(例: `!set_time 60` ➔ 60分に設定) ※管理者のみ*",
+        inline=False
+    )
+    embed.add_field(
+        name="`!add_channel <VC名>`",
+        value="自動切断の対象にするボイスチャンネルを追加します。\n*(例: `!add_channel 寝落ち部屋`) ※管理者のみ*",
+        inline=False
+    )
+    embed.add_field(
+        name="`!remove_channel <VC名>`",
+        value="対象チャンネルから削除します。\n*(例: `!remove_channel 寝落ち部屋`) ※管理者のみ*",
+        inline=False
+    )
+    
+    # フッターを追加（オプション）
+    embed.set_footer(text=f"Requested by {ctx.author.name}", icon_url=ctx.author.display_avatar.url)
+    
+    await ctx.send(embed=embed)
 
 # 設定確認コマンド
 @bot.command(name="status", aliases=["config"])
